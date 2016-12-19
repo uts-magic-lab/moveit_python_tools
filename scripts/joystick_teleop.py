@@ -30,7 +30,6 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Quaternion
 from sensor_msgs.msg import Joy, JointState
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from control_msgs.msg import JointTrajectoryControllerState
 from pr2_controllers_msgs.msg import Pr2GripperCommand
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from math import radians
@@ -76,7 +75,8 @@ class JoystickGripper(object):
             self.max_gripper_pos = config_dict['max_gripper_pos']
             self.node_rate_hz = config_dict['node_rate_hz']
 
-        self.gripper_amount = 0.0
+        self.gripper_amount = 0.1
+        self.last_gripper_amount = self.gripper_amount
         self.gripper_pub = rospy.Publisher(self.gripper_command_topic,
                                            Pr2GripperCommand,
                                            queue_size=1)
@@ -100,18 +100,22 @@ class JoystickGripper(object):
 
         if data.buttons[self.deadman_button]:
             self.gripper_amount += data.buttons[
-                self.open_button] * self.gripper_amount
-            self.gripper_amount += data.buttons[-self.close_button] * \
-                self.gripper_amount
+                self.open_button] * self.gripper_step
+            self.gripper_amount += data.buttons[
+                self.close_button] * -self.gripper_step
             if self.gripper_amount < self.min_gripper_pos:
                 self.gripper_amount = self.min_gripper_pos
             elif self.gripper_amount > self.max_gripper_pos:
                 self.gripper_amount = self.max_gripper_pos
 
-            cmd = Pr2GripperCommand()
-            cmd.max_effort = 100.0
-            cmd.position = self.gripper_amount
-            self.gripper_pub.publish(cmd)
+            if self.gripper_amount != self.last_gripper_amount:
+                cmd = Pr2GripperCommand()
+                cmd.max_effort = 100.0
+                cmd.position = self.gripper_amount
+                self.gripper_pub.publish(cmd)
+                rospy.loginfo("Gripper cmd: " + self.gripper_command_topic +
+                              " receiving: " + str(cmd))
+                self.last_gripper_amount = self.gripper_amount
 
 
 class JoystickTorso(object):
@@ -148,6 +152,7 @@ class JoystickTorso(object):
         js_msg = rospy.wait_for_message('/joint_states', JointState)
         t_idx = js_msg.name.index('torso_lift_joint')
         self.torso_position = js_msg.position[t_idx]
+        self.last_torso_position = self.torso_position
         self.torso_pub = rospy.Publisher(self.torso_command_topic,
                                          JointTrajectory,
                                          queue_size=1)
@@ -172,30 +177,34 @@ class JoystickTorso(object):
         if data.buttons[self.deadman_button_1] or data.buttons[self.deadman_button_2]:
             self.torso_position += data.buttons[
                 self.torso_up_button] * self.torso_step
-            self.torso_position += data.buttons[-self.torso_down_button] * \
-                self.torso_step
+            self.torso_position += data.buttons[
+                self.torso_down_button] * -self.torso_step
             if self.torso_position < self.min_torso:
                 self.torso_position = self.min_torso
             elif self.torso_position > self.max_torso:
                 self.torso_position = self.max_torso
 
-            cmd = JointTrajectory()
-            cmd.joint_names = ['torso_lift_joint']
-            jtp = JointTrajectoryPoint()
-            jtp.positions.append(self.torso_position)
-            jtp.time_from_start = rospy.Duration(self.torso_timestep)
-            cmd.points.append(jtp)
-            self.self.torso_pub.publish(cmd)
+            if self.torso_position != self.last_torso_position:
+                cmd = JointTrajectory()
+                cmd.joint_names = ['torso_lift_joint']
+                jtp = JointTrajectoryPoint()
+                jtp.positions.append(self.torso_position)
+                jtp.time_from_start = rospy.Duration(self.torso_timestep)
+                cmd.points.append(jtp)
+                self.torso_pub.publish(cmd)
+                rospy.loginfo("Torso going to: " + str(cmd))
+                self.last_torso_position = self.torso_position
 
 
 class JoystickPose(object):
     def __init__(self, config_dict=None):
-        if config_dict is None
+        if config_dict is None:
             self.initial_pose_x = rospy.get_param('~initial_pose_x', 0.5)
             self.initial_pose_y = rospy.get_param('~initial_pose_y', 0.3)
             self.initial_pose_z = rospy.get_param('~initial_pose_z', 1.0)
             self.initial_pose_roll = rospy.get_param('~initial_pose_roll', 0.0)
-            self.initial_pose_pitch = rospy.get_param('~initial_pose_pitch', 0.0)
+            self.initial_pose_pitch = rospy.get_param(
+                '~initial_pose_pitch', 0.0)
             self.initial_pose_yaw = rospy.get_param('~initial_pose_yaw', 0.0)
             self.initial_pose_frame_id = rospy.get_param(
                 '~initial_pose_frame_id', 'base_link')
@@ -213,9 +222,10 @@ class JoystickPose(object):
             self.roll_axe_minus = rospy.get_param('~roll_axe_minus', 5)
             self.pitch_axe_plus = rospy.get_param('~pitch_axe_plus', 6)
             self.pitch_axe_minus = rospy.get_param('~pitch_axe_minus', 4)
-            self.yaw_button_plus = rospy.get_param('~yaw_axe_plus', 0)
-            self.yaw_button_minus = rospy.get_param('~yaw_axe_plus', 3)
-            self.rotation_step = rospy.get_param('~rotation_step', 5.0)  # Degrees
+            self.yaw_button_plus = rospy.get_param('~yaw_button_plus', 0)
+            self.yaw_button_minus = rospy.get_param('~yaw_button_minus', 3)
+            self.rotation_step = rospy.get_param(
+                '~rotation_step', 5.0)  # Degrees
 
             self.reset_button = rospy.get_param('~reset_button', 16)
 
@@ -228,39 +238,39 @@ class JoystickPose(object):
 
             self.node_rate_hz = rospy.get_param('~node_rate_hz', 10)
         else:
-            self.initial_pose_x = config['initial_pose_x']
-            self.initial_pose_y = config['initial_pose_y']
-            self.initial_pose_z = config['initial_pose_z']
-            self.initial_pose_roll = config['initial_pose_roll']
-            self.initial_pose_pitch = config['initial_pose_pitch']
-            self.initial_pose_yaw = config['initial_pose_yaw']
-            self.initial_pose_frame_id = config['initial_pose_frame_id']
-            self.pose_stamped_topic = config['pose_stamped_topic']
-            self.joystick_topic = config['joystick_topic']
-            self.deadman_button = config['deadman_button']
-            self.x_axe = config['x_axe']
-            self.y_axe = config['y_axe']
-            self.z_axe = config['z_axe']
-            self.cartesian_step = config['cartesian_step']
+            self.initial_pose_x = config_dict['initial_pose_x']
+            self.initial_pose_y = config_dict['initial_pose_y']
+            self.initial_pose_z = config_dict['initial_pose_z']
+            self.initial_pose_roll = config_dict['initial_pose_roll']
+            self.initial_pose_pitch = config_dict['initial_pose_pitch']
+            self.initial_pose_yaw = config_dict['initial_pose_yaw']
+            self.initial_pose_frame_id = config_dict['initial_pose_frame_id']
+            self.pose_stamped_topic = config_dict['pose_stamped_topic']
+            self.joystick_topic = config_dict['joystick_topic']
+            self.deadman_button = config_dict['deadman_button']
+            self.x_axe = config_dict['x_axe']
+            self.y_axe = config_dict['y_axe']
+            self.z_axe = config_dict['z_axe']
+            self.cartesian_step = config_dict['cartesian_step']
 
-            self.roll_axe_plus = config['roll_axe_plus']
-            self.roll_axe_minus = config['roll_axe_minus']
-            self.pitch_axe_plus = config['pitch_axe_plus']
-            self.pitch_axe_minus = config['pitch_axe_minus']
-            self.yaw_button_plus = config['yaw_axe_plus']
-            self.yaw_button_minus = config['yaw_axe_plus']
-            self.rotation_step = config['rotation_step']  # Degrees
+            self.roll_axe_plus = config_dict['roll_axe_plus']
+            self.roll_axe_minus = config_dict['roll_axe_minus']
+            self.pitch_axe_plus = config_dict['pitch_axe_plus']
+            self.pitch_axe_minus = config_dict['pitch_axe_minus']
+            self.yaw_button_plus = config_dict['yaw_button_plus']
+            self.yaw_button_minus = config_dict['yaw_button_minus']
+            self.rotation_step = config_dict['rotation_step']  # Degrees
 
-            self.reset_button = config['reset_button']
+            self.reset_button = config_dict['reset_button']
 
-            self.max_x = config['max_x']
-            self.min_x = config['min_x']
-            self.max_y = config['max_y']
-            self.min_y = config['min_y']
-            self.max_z = config['max_z']
-            self.min_z = config['min_z']
+            self.max_x = config_dict['max_x']
+            self.min_x = config_dict['min_x']
+            self.max_y = config_dict['max_y']
+            self.min_y = config_dict['min_y']
+            self.max_z = config_dict['max_z']
+            self.min_z = config_dict['min_z']
 
-            self.node_rate_hz = config['node_rate_hz']
+            self.node_rate_hz = config_dict['node_rate_hz']
 
         ps = PoseStamped()
         ps.pose.position.x = self.initial_pose_x
@@ -274,11 +284,13 @@ class JoystickPose(object):
 
         self.initial_pose = ps
         self.joy_pose = deepcopy(ps)
-        self.pub = rospy.Publisher(self.pose_stamped_topic, PoseStamped)
+        self.pub = rospy.Publisher(self.pose_stamped_topic,
+                                   PoseStamped,
+                                   queue_size=1)
         rospy.loginfo("Publishing to: " + str(self.pub.resolved_name))
-        self.deadman_pushed = False
 
         self.last_joy_stamp = time.time()
+        self.last_pose = self.joy_pose.pose
         self.joy_sub = rospy.Subscriber(self.joystick_topic,
                                         Joy,
                                         self.joy_cb,
@@ -324,13 +336,13 @@ class JoystickPose(object):
             roll, pitch, yaw = euler_from_quaternion(
                 msg_to_list(self.joy_pose.pose.orientation))
             roll += data.axes[self.roll_axe_plus] * \
-                radians(-self.rotation_step)
+                radians(self.rotation_step)
             roll += data.axes[self.roll_axe_minus] * \
-                radians(self.rotation_step)
-            pitch += data.axes[self.pitch_axe_plus] * \
                 radians(-self.rotation_step)
-            pitch += data.axes[self.pitch_axe_minus] * \
+            pitch += data.axes[self.pitch_axe_plus] * \
                 radians(self.rotation_step)
+            pitch += data.axes[self.pitch_axe_minus] * \
+                radians(-self.rotation_step)
             yaw += (data.buttons[self.yaw_button_plus] * radians(self.rotation_step) +
                     data.buttons[self.yaw_button_minus] * radians(-self.rotation_step))
             self.joy_pose.pose.orientation = Quaternion(
@@ -338,84 +350,82 @@ class JoystickPose(object):
 
             self.last_joy_stamp = time.time()
 
-            rospy.loginfo("Publishing pose: " + str(self.joy_pose.pose))
-            self.pub.publish(self.joy_pose)
+            if self.joy_pose.pose != self.last_pose:
+                rospy.loginfo("Publishing pose: " + str(self.joy_pose.pose))
+                self.pub.publish(self.joy_pose)
+                self.last_pose = deepcopy(self.joy_pose.pose)
 
 
 if __name__ == '__main__':
     rospy.init_node('joystick_pose_pub')
-    cfg_d_lp = {
-            'initial_pose_x': 0.5,
-            'initial_pose_y': 0.3,
-            'initial_pose_z': 1.0,
-            'initial_pose_roll': 0.0,
-            'initial_pose_pitch': 0.0,
-            'initial_pose_yaw': 0.0,
-            'initial_pose_frame_id': 'base_link',
-            'pose_stamped_topic': '/left_arm_goal_pose',
-            'joystick_topic': '/joy',
-            'deadman_button': 11,
-            'x_axe': 1,
-            'y_axe': 0,
-            'z_axe': 3,
-            'cartesian_step': 0.025,
+    cfg_d_lp = {'initial_pose_x': 0.5,
+                'initial_pose_y': 0.2,
+                'initial_pose_z': 1.0,
+                'initial_pose_roll': 0.0,
+                'initial_pose_pitch': 0.0,
+                'initial_pose_yaw': 0.0,
+                'initial_pose_frame_id': 'base_link',
+                'pose_stamped_topic': '/left_arm_goal_pose',
+                'joystick_topic': '/joy',
+                'deadman_button': 11,
+                'x_axe': 1,
+                'y_axe': 0,
+                'z_axe': 3,
+                'cartesian_step': 0.015,
 
-            'roll_axe_plus': 7,
-            'roll_axe_minus': 5,
-            'pitch_axe_plus': 6,
-            'pitch_axe_minus': 4,
-            'yaw_axe_plus': 0,
-            'yaw_axe_plus': 3,
-            'rotation_step': 5.0,  # Degrees
+                'roll_axe_plus': 7,
+                'roll_axe_minus': 5,
+                'pitch_axe_plus': 6,
+                'pitch_axe_minus': 4,
+                'yaw_button_plus': 0,
+                'yaw_button_minus': 3,
+                'rotation_step': 5.0,  # Degrees
 
-            'reset_button': 16,
+                'reset_button': 16,
 
-            'max_x': 0.7,
-            'min_x': 0.0,
-            'max_y': 0.5,
-            'min_y': -0.5,
-            'max_z': 1.5,
-            'min_z': 0.2,
+                'max_x': 0.8,
+                'min_x': 0.0,
+                'max_y': 0.75,
+                'min_y': -0.5,
+                'max_z': 1.5,
+                'min_z': 0.0,
 
-            'node_rate_hz': 10
-    }
+                'node_rate_hz': 10}
     jp_left = JoystickPose(config_dict=cfg_d_lp)
-    cfg_d_rp = {
-            'initial_pose_x': 0.5,
-            'initial_pose_y': -0.3,
-            'initial_pose_z': 1.0,
-            'initial_pose_roll': 0.0,
-            'initial_pose_pitch': 0.0,
-            'initial_pose_yaw': 0.0,
-            'initial_pose_frame_id': 'base_link',
-            'pose_stamped_topic': '/right_arm_goal_pose',
-            'joystick_topic': '/joy',
-            'deadman_button': 9,
-            'x_axe': 1,
-            'y_axe': 0,
-            'z_axe': 3,
-            'cartesian_step': 0.025,
+    cfg_d_rp = {'initial_pose_x': 0.5,
+                'initial_pose_y': -0.2,
+                'initial_pose_z': 1.0,
+                'initial_pose_roll': 0.0,
+                'initial_pose_pitch': 0.0,
+                'initial_pose_yaw': 0.0,
+                'initial_pose_frame_id': 'base_link',
+                'pose_stamped_topic': '/right_arm_goal_pose',
+                'joystick_topic': '/joy',
+                'deadman_button': 9,
+                'x_axe': 1,
+                'y_axe': 0,
+                'z_axe': 3,
+                'cartesian_step': 0.015,
 
-            'roll_axe_plus': 7,
-            'roll_axe_minus': 5,
-            'pitch_axe_plus': 6,
-            'pitch_axe_minus': 4,
-            'yaw_axe_plus': 0,
-            'yaw_axe_plus': 3,
-            'rotation_step': 5.0,  # Degrees
+                'roll_axe_plus': 7,
+                'roll_axe_minus': 5,
+                'pitch_axe_plus': 6,
+                'pitch_axe_minus': 4,
+                'yaw_button_plus': 0,
+                'yaw_button_minus': 3,
+                'rotation_step': 5.0,  # Degrees
 
-            'reset_button': 16,
+                'reset_button': 16,
 
-            'max_x': 0.7,
-            'min_x': 0.0,
-            'max_y': 0.5,
-            'min_y': -0.5,
-            'max_z': 1.5,
-            'min_z': 0.2,
+                'max_x': 0.8,
+                'min_x': 0.0,
+                'max_y': 0.5,
+                'min_y': -0.75,
+                'max_z': 1.5,
+                'min_z': 0.0,
 
-            'node_rate_hz': 10
-    }
-    jp_right = JoystickPose()
+                'node_rate_hz': 10}
+    jp_right = JoystickPose(config_dict=cfg_d_rp)
 
     cfg_d_lg = {
         'gripper_command_topic': '/l_gripper_controller/command',
@@ -423,9 +433,9 @@ if __name__ == '__main__':
         'deadman_button': 11,
         'open_button': 13,
         'close_button': 15,
-        'gripper_step': 0.11,
-        'min_gripper_pos': 0.08,
-        'max_gripper_pos': 1.0,
+        'gripper_step': 0.001,
+        'min_gripper_pos': 0.008,
+        'max_gripper_pos': 0.1,
         'node_rate_hz': 4.0
     }
     cfg_d_rg = {
@@ -434,9 +444,9 @@ if __name__ == '__main__':
         'deadman_button': 9,
         'open_button': 13,
         'close_button': 15,
-        'gripper_step': 0.11,
-        'min_gripper_pos': 0.08,
-        'max_gripper_pos': 1.0,
+        'gripper_step': 0.001,
+        'min_gripper_pos': 0.008,
+        'max_gripper_pos': 0.1,
         'node_rate_hz': 4.0
     }
     gripper_left = JoystickGripper(config_dict=cfg_d_lg)
@@ -447,12 +457,12 @@ if __name__ == '__main__':
         'joystick_topic': '/joy',
         'deadman_button_1': 11,
         'deadman_button_2': 9,
-        'torso_up_button': 13,
-        'torso_down_button': 15,
-        'torso_step': 0.11,
-        'torso_timestep': 0.11,
-        'min_torso': 0.08,
-        'max_torso': 1.0,
+        'torso_up_button': 12,
+        'torso_down_button': 14,
+        'torso_step': 0.001,
+        'torso_timestep': 0.5,
+        'min_torso': 0.01,
+        'max_torso': 0.30,
         'node_rate_hz': 4.0
     }
     torso = JoystickTorso(config_dict=cfg_d_t)
