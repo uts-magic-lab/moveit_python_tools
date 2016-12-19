@@ -27,6 +27,8 @@ install(PROGRAMS
   scripts/pr2_get_ik.py
   scripts/pr2_get_ik_and_go.py
   scripts/tf_for_me.py
+  scripts/joystick_teleop.py
+  scripts/pr2_go_to_topic_pose_fjt.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
