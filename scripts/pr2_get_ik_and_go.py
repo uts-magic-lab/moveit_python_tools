@@ -75,8 +75,8 @@ if __name__ == '__main__':
 
         ps.header.frame_id = from_frame
         rospy.loginfo("Getting IK!")
-        resp = gik.get_ik(ps, group='right_arm', duration=3.0,
-                          attempts=0)
+        resp = gik.get_ik(ps, group='right_arm', ik_duration=3.0,
+                          ik_attempts=0)
         rospy.loginfo(str(resp))
         err_code = resp.error_code.val
         rospy.loginfo("Error is: " + moveit_error_dict[err_code])
@@ -107,7 +107,7 @@ if __name__ == '__main__':
                 del joint_names[index]
                 del positions[index]
 
-            gtp.go_to_pose(joint_names, positions, time)
+            resp = gtp.go_to_configuration(joint_names, positions, time)
             rospy.loginfo(str(resp))
             err_code = resp.error_code.val
             rospy.loginfo("Error is: " + moveit_error_dict[err_code])

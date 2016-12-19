@@ -54,7 +54,7 @@ if __name__ == '__main__':
     positions = [float(p) for p in positions]
     print "positions: " + str(positions)
 
-    resp = gtp.go_to_pose(joints, positions, time)
+    resp = gtp.go_to_configuration(joints, positions, time)
     rospy.loginfo(str(resp))
     err_code = resp.error_code.val
     rospy.loginfo("Error is: " + moveit_error_dict[err_code])

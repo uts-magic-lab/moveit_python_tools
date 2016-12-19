@@ -71,7 +71,7 @@ class GetIK(object):
         req.ik_request.pose_stamped = pose_stamped
         req.ik_request.timeout = rospy.Duration(ik_timeout)
         req.ik_request.attempts = ik_attempts
-        req.avoid_collisions = avoid_collisions
+        req.ik_request.avoid_collisions = avoid_collisions
 
         try:
             resp = self.ik_srv.call(req)
