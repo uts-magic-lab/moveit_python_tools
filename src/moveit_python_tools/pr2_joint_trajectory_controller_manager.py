@@ -96,13 +96,13 @@ class PR2JointTrajectoryControllerManager(object):
             if j in self.managed_joints:
                 joints_in_goal.append(j)
 
-        rospy.loginfo("This controller manages the joints: " +
+        rospy.logdebug("This controller manages the joints: " +
                       str(self.managed_joints))
-        rospy.loginfo("Goal contains our joints: " + str(joints_in_goal))
+        rospy.logdebug("Goal contains our joints: " + str(joints_in_goal))
         missing_joints = list(set(self.managed_joints) - set(joints_in_goal))
-        rospy.loginfo("Goal is missing joints: " + str(missing_joints))
+        rospy.logdebug("Goal is missing joints: " + str(missing_joints))
         extra_joints = list(set(goal.joint_names) - set(joints_in_goal))
-        rospy.loginfo("Discarding joints not from this controller: " +
+        rospy.logdebug("Discarding joints not from this controller: " +
                       str(extra_joints))
         if len(extra_joints) > 0:
             # Create a new goal only with the found joints, in the next
@@ -167,10 +167,10 @@ class PR2JointTrajectoryControllerManager(object):
                     # TODO: deal with forces, they aren't published in state...
                     # but they are in joint_states
 
-        # Now the trajectory should be complete and we can send the goal
+        # Now the trajectory should be complete< and we can send the goal
         jtg = FollowJointTrajectoryGoal()
         jtg.trajectory = goal
-        rospy.loginfo("Sending goal: " + str(goal))
+        rospy.logdebug("Sending goal: " + str(goal))
         self._ac.send_goal(jtg,
                            done_cb=self.done_cb,
                            feedback_cb=self.feedback_cb)
