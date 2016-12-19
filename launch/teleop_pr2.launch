@@ -13,6 +13,8 @@
         <rosparam file="$(find pr2_teleop)/config/teleop.yaml" command="load" />
     </node>
 
+    <node pkg="moveit_python_tools" type="kill_gripper_nodes.sh" name="kill_gripper_nodes"/>
+
     <!-- Launches MoveIt! -->
     <include file="$(find pr2_moveit_config)/launch/move_group.launch"/>
 </launch>
