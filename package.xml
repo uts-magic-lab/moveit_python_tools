@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package>
+  <name>moveit_python_tools</name>
+  <version>0.0.0</version>
+  <description>The moveit_python_tools package contains
+    python goodies to ease common operations within moveit.
+    It contains classes to use easier/faster MoveIt! modules
+    and command line tools to use them too.</description>
+
+  <author email="Sammy.Pfeiffer@student.uts.edu.au">Sammy Pfeiffer</author>
+  <maintainer email="Sammy.Pfeiffer@student.uts.edu.au">Sammy Pfeiffer</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>moveit_msgs</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>tf</build_depend>
+  <run_depend>moveit_msgs</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>tf</run_depend>
+
+</package>
