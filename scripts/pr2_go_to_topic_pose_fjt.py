@@ -19,7 +19,7 @@ Author: Sammy Pfeiffer <Sammy.Pfeiffer at student.uts.edu.au>
 
 
 class GoToTopicPoseByFJT(object):
-    def __init__(self, side, time_for_goals=0.5):
+    def __init__(self, side, time_for_goals=0.25):
         # TODO: Decide duration of motion relative to how far goals are
         rospy.loginfo("Initializing GoToTopicPose...")
         self.time_for_goals = time_for_goals
@@ -28,13 +28,15 @@ class GoToTopicPoseByFJT(object):
             self.gik = GetIK(self.group_name)
             self.arm_fjt = PR2JointTrajectoryControllerManager(
                 '/r_arm_controller')
+            self.pose_topic = '/right_arm_goal_pose'
         elif side == 'left':
             self.group_name = 'left_arm'
             self.gik = GetIK(self.group_name)
             self.arm_fjt = PR2JointTrajectoryControllerManager(
                 '/l_arm_controller')
+            self.pose_topic = '/left_arm_goal_pose'
 
-        self.sub = rospy.Subscriber('~goal_pose',
+        self.sub = rospy.Subscriber(self.pose_topic,
                                     PoseStamped,
                                     self.pose_cb,
                                     queue_size=1)
@@ -85,4 +87,5 @@ class GoToTopicPoseByFJT(object):
 if __name__ == '__main__':
     rospy.init_node('pr2_go_to_topic_pose')
     gttpfjt = GoToTopicPoseByFJT(side="left")
+    gttpfjt = GoToTopicPoseByFJT(side="right")
     rospy.spin()
