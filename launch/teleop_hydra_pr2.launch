@@ -1,0 +1,20 @@
+<launch>
+    <!-- Listens to PoseStamped topics for each arm to move them -->
+    <node pkg="moveit_python_tools" name="pr2_move_arms_from_pose_topic" type="pr2_go_to_topic_pose_fjt.py" />
+
+    <!-- Publishes a PoseStamped with a 3D pose based on the joystick
+         Also publishes goals for the grippers
+         Also publishes goals for the torso -->
+    <node pkg="moveit_python_tools" name="joystick_teleop" type="joystick_teleop.py" />
+
+    <!-- Publishes goals for the base and the head -->
+    <node type="teleop_pr2" pkg="pr2_teleop" name="pr2_teleop" output="screen">
+        <remap from="cmd_vel" to="base_controller/command" />
+        <rosparam file="$(find pr2_teleop)/config/teleop.yaml" command="load" />
+    </node>
+
+    <node pkg="moveit_python_tools" type="kill_gripper_nodes.sh" name="kill_gripper_nodes"/>
+
+    <!-- Launches MoveIt! -->
+    <include file="$(find pr2_moveit_config)/launch/move_group.launch"/>
+</launch>

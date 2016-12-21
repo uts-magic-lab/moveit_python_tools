@@ -42,6 +42,12 @@ class GetFK(object):
     def js_cb(self, data):
         self.last_js = data
 
+    def get_current_fk_pose(self):
+        resp = self.get_current_fk()
+        if len(resp.pose_stamped) >= 1:
+            return resp.pose_stamped[0]
+        return None
+
     def get_current_fk(self):
         while not rospy.is_shutdown() and self.last_js is None:
             rospy.logwarn("Waiting for a /joint_states message...")

@@ -48,8 +48,8 @@ class GoToTopicPoseByFJT(object):
         ini_t = time.time()
         resp = self.gik.get_ik(ps,
                                group=self.group_name,
-                               ik_timeout=0.5,
-                               ik_attempts=0)
+                               ik_timeout=0.1,
+                               ik_attempts=1)
         fin_t = time.time()
         dur_ik = fin_t - ini_t
         rospy.logwarn("IK call took: " + str(dur_ik))
