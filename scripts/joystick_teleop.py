@@ -51,7 +51,7 @@ if __name__ == '__main__':
                 'x_axe': 1,
                 'y_axe': 0,
                 'z_axe': 3,
-                'cartesian_step': 0.015,
+                'cartesian_step': 0.035,
 
                 'roll_axe_plus': 7,
                 'roll_axe_minus': 5,
@@ -59,7 +59,7 @@ if __name__ == '__main__':
                 'pitch_axe_minus': 4,
                 'yaw_button_plus': 0,
                 'yaw_button_minus': 3,
-                'rotation_step': 5.0,  # Degrees
+                'rotation_step': 9.0,  # Degrees
 
                 'reset_button': 16,
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
                 'x_axe': 1,
                 'y_axe': 0,
                 'z_axe': 3,
-                'cartesian_step': 0.015,
+                'cartesian_step': 0.035,
 
                 'roll_axe_plus': 7,
                 'roll_axe_minus': 5,
@@ -95,7 +95,7 @@ if __name__ == '__main__':
                 'pitch_axe_minus': 4,
                 'yaw_button_plus': 0,
                 'yaw_button_minus': 3,
-                'rotation_step': 5.0,  # Degrees
+                'rotation_step': 9.0,  # Degrees
 
                 'reset_button': 16,
 
@@ -143,7 +143,7 @@ if __name__ == '__main__':
         'deadman_button_2': 9,
         'torso_up_button': 12,
         'torso_down_button': 14,
-        'torso_step': 0.001,
+        'torso_step': 0.005,
         'torso_timestep': 0.5,
         'min_torso': 0.01,
         'max_torso': 0.30,
